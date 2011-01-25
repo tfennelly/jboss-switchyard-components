@@ -1,0 +1,14 @@
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:gre="http://broken/unknown/namespace">
+   <soap:Header/>
+   <soap:Body>
+      <gre:greet>
+         <arg0>
+            <person>
+               <firstname>Mal</firstname>
+               <lastname>Beck</lastname>
+            </person>
+            <time>2011-01-22T21:32:52</time>
+         </arg0>
+      </gre:greet>
+   </soap:Body>
+</soap:Envelope>

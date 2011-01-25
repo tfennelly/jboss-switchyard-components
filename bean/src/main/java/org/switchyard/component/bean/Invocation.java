@@ -22,6 +22,9 @@
 
 package org.switchyard.component.bean;
 
+import org.switchyard.Exchange;
+import org.switchyard.internal.handlers.TransformSequence;
+
 import java.lang.reflect.Method;
 
 /**
@@ -36,6 +39,11 @@ public class Invocation {
      */
     private Method method;
     /**
+     * The exchange instance.
+     */
+    private Exchange exchange;
+
+    /**
      * The invocation arguments.
      */
     private Object[] args;
@@ -44,20 +52,29 @@ public class Invocation {
      * Constructor.
      *
      * @param method The method/operation being invoked.
-     * @param arg    The invocation arguments.
+     * @param exchange The exchange instance.
+     * @throws BeanComponentException Unsupported method structure, or type mismatch.
      */
-    Invocation(Method method, Object arg) {
+    Invocation(Method method, Exchange exchange) throws BeanComponentException {
         this.method = method;
-        this.args = castArg(arg);
+        this.exchange = exchange;
+        this.args = castArg(method, exchange.getMessage().getContent());
+        assertOK();
     }
 
     /**
-     * Get the method/operation being invoked.
-     *
-     * @return The method/operation being invoked.
+     * Assert that the exchange payload type(s) and the bean method
+     * argument type(s) match.
      */
-    public Method getMethod() {
-        return method;
+    private void assertOK() throws BeanComponentException {
+        if(!TransformSequence.assertTransformsApplied(exchange)) {
+            String actualPayloadType = TransformSequence.getCurrentMessageType(exchange);
+            String expectedPayloadType = TransformSequence.getTargetMessageType(exchange);
+
+            throw new BeanComponentException("Bean service operation '" + operationName() + "' requires a payload type of '" + expectedPayloadType + "'.  Actual payload type is '" + actualPayloadType + "'.  You must define and register a Transformer to transform between these types.");
+        }
+        assertMethodStructureSupported();
+        assertTypesMatch();
     }
 
     /**
@@ -69,11 +86,56 @@ public class Invocation {
         return args;
     }
 
-    private static Object[] castArg(Object arg) {
-        if (arg.getClass().isArray()) {
-            return (Object[].class).cast(arg);
-        } else {
-            return new Object[]{arg};
+    /**
+     * Get the method/operation being invoked.
+     *
+     * @return The method/operation being invoked.
+     */
+    public Method getMethod() {
+        return method;
+    }
+
+    private static Object[] castArg(Method method, Object content) {
+        if(method.getParameterTypes().length == 1 && content != null) {
+            if (content.getClass().isArray()) {
+                return (Object[].class).cast(content);
+            } else {
+                return new Object[]{content};
+            }
         }
+        return null;
+    }
+
+    private void assertMethodStructureSupported() throws BeanComponentException {
+        Class<?>[] parameterTypes = method.getParameterTypes();
+
+        // TODO: Only supports 0 or 1 arg operations for now...
+        if(parameterTypes.length > 1) {
+            throw new BeanComponentException("Bean service operation '" + operationName() + "' has more than 1 argument.  Bean component currently only supports single argument operations.");
+        }
+    }
+
+    private void assertTypesMatch() throws BeanComponentException {
+        if(args == null) {
+            if(method.getParameterTypes().length != 0) {
+                throw new BeanComponentException("Bean service operation '" + operationName() + "' requires a single argument.  Exchange payload specifies no payload.");
+            }
+        } else {
+            if(args.length > 1) {
+                throw new BeanComponentException("Bean service operation '" + operationName() + "' only supports a single argument.  Exchange payload specifies " + args.length + " args.");
+            }
+
+            if(args[0] != null) {
+                Class<?> argType = method.getParameterTypes()[0];
+
+                if(!argType.isInstance(args[0])) {
+                    throw new BeanComponentException("Bean service operation '" + operationName() + "' requires a payload type of '" + argType.getName() + "'.  Actual payload type is '" + args[0].getClass().getName() + "'.  You must define and register a Transformer.");
+                }
+            }
+        }
+    }
+
+    private String operationName() {
+        return exchange.getService().getName() + "#" + method.getName();
     }
 }

@@ -51,6 +51,7 @@ import org.switchyard.HandlerException;
 import org.switchyard.Message;
 import org.switchyard.ServiceDomain;
 import org.switchyard.internal.ServiceDomains;
+import org.switchyard.metadata.ServiceOperation;
 
 /**
  * Client Proxy CDI Bean.
@@ -308,7 +309,7 @@ public class ClientProxyBean implements Bean {
         }
 
         private Message prepareSend(Exchange exchange, Object[] args, Method method) {
-            BeanServiceMetadata.setOperationName(exchange, method.getName());
+            ServiceOperation.Name.set(exchange, method.getName());
             Message inMessage = exchange.createMessage();
             inMessage.setContent(args);
             return inMessage;

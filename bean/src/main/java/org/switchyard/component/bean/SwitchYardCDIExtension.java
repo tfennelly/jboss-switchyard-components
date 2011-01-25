@@ -37,8 +37,11 @@ import javax.enterprise.inject.spi.*;
 import javax.enterprise.util.AnnotationLiteral;
 import javax.xml.namespace.QName;
 
+import org.switchyard.ServiceDomain;
 import org.switchyard.internal.DefaultHandlerChain;
 import org.switchyard.internal.ServiceDomains;
+import org.switchyard.metadata.JavaService;
+import org.switchyard.transform.Transformer;
 
 /**
  * Portable CDI extension for SwitchYard.
@@ -55,7 +58,9 @@ public class SwitchYardCDIExtension implements Extension {
      * List of created {@link ClientProxyBean} instances.
      */
     private List<ClientProxyBean> createdProxyBeans = new ArrayList<ClientProxyBean>();
-
+    /**
+     * List of service beans.
+     */
     private List<Bean<?>> serviceBeans = new ArrayList<Bean<?>>();
 
     /**
@@ -71,6 +76,7 @@ public class SwitchYardCDIExtension implements Extension {
      * @param beanManager CDI Bean Manager instance.
      */
     public void afterBeanDiscovery(@Observes AfterBeanDiscovery abd, BeanManager beanManager) {
+        ServiceDomain domain = ServiceDomains.getDomain();
         Set<Bean<?>> allBeans = beanManager.getBeans(Object.class, new AnnotationLiteral<Any>() {
         });
 
@@ -100,6 +106,20 @@ public class SwitchYardCDIExtension implements Extension {
                 serviceBeans.add(bean);
                 if (serviceType.isInterface()) {
                     addInjectableClientProxyBean(bean, serviceType, serviceAnnotation, beanManager, abd);
+                }
+            }
+
+            // Register all transformers we can find...
+            if(Transformer.class.isAssignableFrom(bean.getBeanClass())) {
+                Class<?> transformerRT = bean.getBeanClass();
+
+                // TODO: Should probably only auto register a transformer based on an annotation or interface ??
+                try {
+                    domain.getTransformerRegistry().addTransformer((Transformer) transformerRT.newInstance());
+                } catch (InstantiationException e) {
+                    throw new IllegalStateException("Invalid Transformer implementation '" + transformerRT.getName() + "'.", e);
+                } catch (IllegalAccessException e) {
+                    throw new IllegalStateException("Invalid Transformer implementation '" + transformerRT.getName() + "'.", e);
                 }
             }
         }
@@ -148,7 +168,7 @@ public class SwitchYardCDIExtension implements Extension {
         // Register the Service in the ESB domain...
         DefaultHandlerChain handlerChain = new DefaultHandlerChain();
         handlerChain.addLast("serviceProxy", proxyHandler);
-        ServiceDomains.getDomain().registerService(serviceQName, handlerChain);
+        ServiceDomains.getDomain().registerService(serviceQName, handlerChain, JavaService.fromClass(serviceType));
     }
 
     private void addInjectableClientProxyBean(Bean<?> serviceBean, Class<?> serviceType, Service serviceAnnotation, BeanManager beanManager, AfterBeanDiscovery abd) {

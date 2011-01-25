@@ -24,6 +24,7 @@ package org.switchyard.component.bean;
 
 import org.switchyard.Exchange;
 import org.switchyard.HandlerException;
+import org.switchyard.message.PayloadTypeName;
 
 /**
  * Bean Component Exception.

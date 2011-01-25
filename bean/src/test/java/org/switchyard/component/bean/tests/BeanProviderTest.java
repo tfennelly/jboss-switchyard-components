@@ -32,8 +32,8 @@ import org.switchyard.Message;
 import org.switchyard.MockHandler;
 import org.switchyard.ServiceDomain;
 import org.switchyard.component.bean.AbstractCDITest;
-import org.switchyard.component.bean.BeanServiceMetadata;
 import org.switchyard.internal.ServiceDomains;
+import org.switchyard.metadata.ServiceOperation;
 
 /*
  * Assorted methods for testing a CDI bean providing a service in SwitchYard.
@@ -47,7 +47,7 @@ public class BeanProviderTest extends AbstractCDITest {
         org.switchyard.Service service = domain.getService(new QName("OneWay"));
         Exchange exchange = domain.createExchange(service, ExchangePattern.IN_ONLY);
 
-        BeanServiceMetadata.setOperationName(exchange, "oneWay");
+        ServiceOperation.Name.set(exchange, "oneWay");
         
         Message inMessage = exchange.createMessage().setContent("hello");
 
@@ -64,7 +64,7 @@ public class BeanProviderTest extends AbstractCDITest {
         org.switchyard.Service service = domain.getService(new QName("RequestResponse"));
         Exchange exchange = domain.createExchange(service, ExchangePattern.IN_OUT, responseConsumer);
 
-        BeanServiceMetadata.setOperationName(exchange, "reply");
+        ServiceOperation.Name.set(exchange, "reply");
         
         Message inMessage = exchange.createMessage().setContent(ECHO_MSG);
 

@@ -22,11 +22,12 @@
 
 package org.switchyard.component.bean;
 
+import org.switchyard.Exchange;
+import org.switchyard.metadata.ServiceOperation;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.switchyard.Exchange;
 
 /**
  * Bean Service meta data.
@@ -36,12 +37,6 @@ import org.switchyard.Exchange;
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
 public class BeanServiceMetadata {
-
-    // TODO: needs to live somewhere else
-    /**
-     * Operation name key.
-     */
-    private static final String OPERATION_NAME = "OPERATION_NAME";
 
     /**
      * Service bean component runtime class.
@@ -67,35 +62,11 @@ public class BeanServiceMetadata {
         this.serviceClass = serviceClass;
     }
 
-    // TODO: needs to live somewhere else
-
-    /**
-     * Set the target service operation name of the supplied {@link Exchange} {@link org.switchyard.Context}.
-     *
-     * @param exchange The exchange instance.
-     * @param name     The target service operation name.
-     */
-    public static void setOperationName(Exchange exchange, String name) {
-        exchange.getContext().setProperty(OPERATION_NAME, name);
-    }
-
-    // TODO: needs to live somewhere else
-
-    /**
-     * Get the target service operation name from the supplied {@link Exchange} {@link org.switchyard.Context}.
-     *
-     * @param exchange The exchange instance.
-     * @return The operation name as specified on the {@link Exchange} {@link org.switchyard.Context}.
-     */
-    public static String getOperationName(Exchange exchange) {
-        return (String) exchange.getContext().getProperty(OPERATION_NAME);
-    }
-
     /**
      * Get the Bean Service operation {@link Invocation} for the specified
      * {@link Exchange}.
      * <p/>
-     * Uses the {@link #getOperationName(org.switchyard.Exchange)} method to extract
+     * Uses the {@link org.switchyard.metadata.ServiceOperation.Name#get(org.switchyard.Exchange)} method to extract
      * the service operation information from the {@link Exchange}.
      *
      * @param exchange The Exchange instance.
@@ -104,7 +75,7 @@ public class BeanServiceMetadata {
      */
     public Invocation getInvocation(Exchange exchange) throws BeanComponentException {
 
-        String operationName = getOperationName(exchange);
+        String operationName = ServiceOperation.Name.get(exchange);
 
         if (operationName != null) {
             List<Method> candidateMethods = getCandidateMethods(operationName);
@@ -115,7 +86,7 @@ public class BeanServiceMetadata {
             }
 
             Method operationMethod = candidateMethods.get(0);
-            return new Invocation(operationMethod, exchange.getMessage().getContent());
+            return new Invocation(operationMethod, exchange);
         } else {
             throw new BeanComponentException("Operation name not specified on exchange.");
         }

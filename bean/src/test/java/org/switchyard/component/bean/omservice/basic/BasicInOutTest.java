@@ -26,10 +26,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.switchyard.*;
 import org.switchyard.component.bean.AbstractCDITest;
-import org.switchyard.component.bean.BeanServiceMetadata;
 import org.switchyard.component.bean.omservice.model.OrderRequest;
 import org.switchyard.component.bean.omservice.model.OrderResponse;
 import org.switchyard.internal.ServiceDomains;
+import org.switchyard.metadata.ServiceOperation;
 
 import javax.xml.namespace.QName;
 
@@ -47,7 +47,7 @@ public class BasicInOutTest extends AbstractCDITest {
         org.switchyard.Service service = domain.getService(new QName("BasicOrderManagementService"));
         Exchange exchange = domain.createExchange(service, ExchangePattern.IN_OUT, responseConsumer);
 
-        BeanServiceMetadata.setOperationName(exchange, "createOrder");
+        ServiceOperation.Name.set(exchange, "createOrder");
         
         Message inMessage = exchange.createMessage();
         inMessage.setContent(new OrderRequest("D123", "ABCD"));
