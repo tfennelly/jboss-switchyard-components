@@ -91,7 +91,7 @@ public class ServiceProxyHandler implements ExchangeHandler {
 
         if (invocation != null) {
             try {
-                if (exchange.getPattern() == ExchangePattern.IN_OUT) {
+                if (exchange.getContract().getServiceOperation().getExchangePattern() == ExchangePattern.IN_OUT) {
                     Object responseObject = invocation.getMethod().invoke(serviceBean, invocation.getArgs());
                     Message message = exchange.createMessage();
 

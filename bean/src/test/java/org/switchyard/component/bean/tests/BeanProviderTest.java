@@ -32,7 +32,11 @@ import org.switchyard.Message;
 import org.switchyard.MockHandler;
 import org.switchyard.ServiceDomain;
 import org.switchyard.component.bean.AbstractCDITest;
+import org.switchyard.contract.DefaultExchangeContract;
+import org.switchyard.contract.ExchangeContract;
 import org.switchyard.internal.ServiceDomains;
+import org.switchyard.metadata.InOnlyOperation;
+import org.switchyard.metadata.InOutOperation;
 import org.switchyard.metadata.ServiceOperation;
 
 /*
@@ -45,10 +49,8 @@ public class BeanProviderTest extends AbstractCDITest {
         
         ServiceDomain domain = ServiceDomains.getDomain();
         org.switchyard.Service service = domain.getService(new QName("OneWay"));
-        Exchange exchange = domain.createExchange(service, ExchangePattern.IN_ONLY);
+        Exchange exchange = domain.createExchange(service, new DefaultExchangeContract(new InOnlyOperation("oneWay")));
 
-        ServiceOperation.Name.set(exchange, "oneWay");
-        
         Message inMessage = exchange.createMessage().setContent("hello");
 
         exchange.send(inMessage);
@@ -62,10 +64,8 @@ public class BeanProviderTest extends AbstractCDITest {
 
         MockHandler responseConsumer = new MockHandler();
         org.switchyard.Service service = domain.getService(new QName("RequestResponse"));
-        Exchange exchange = domain.createExchange(service, ExchangePattern.IN_OUT, responseConsumer);
+        Exchange exchange = domain.createExchange(service, new DefaultExchangeContract(new InOutOperation("reply")), responseConsumer);
 
-        ServiceOperation.Name.set(exchange, "reply");
-        
         Message inMessage = exchange.createMessage().setContent(ECHO_MSG);
 
         exchange.send(inMessage);

@@ -45,11 +45,10 @@ import javax.xml.namespace.QName;
 
 import org.switchyard.Exchange;
 import org.switchyard.ExchangeHandler;
-import org.switchyard.ExchangePattern;
 import org.switchyard.ExchangeState;
 import org.switchyard.HandlerException;
-import org.switchyard.Message;
 import org.switchyard.ServiceDomain;
+import org.switchyard.contract.DefaultExchangeContract;
 import org.switchyard.internal.ServiceDomains;
 import org.switchyard.metadata.ServiceOperation;
 
@@ -255,11 +254,12 @@ public class ClientProxyBean implements Bean {
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             ServiceDomain domain = ServiceDomains.getDomain();
             org.switchyard.Service service = domain.getService(serviceQName);
+
             if (service == null) {
                 throw new BeanComponentException("Service not registered: " + serviceQName);
             }
 
-            if (method.getReturnType() != null && method.getReturnType() != Void.class) {
+            if (method.getReturnType() != null && !Void.TYPE.isAssignableFrom(method.getReturnType())) {
                 final BlockingQueue<Exchange> responseQueue = new ArrayBlockingQueue<Exchange>(1);
 
                 ExchangeHandler responseExchangeHandler = new ExchangeHandler() {
@@ -272,10 +272,9 @@ public class ClientProxyBean implements Bean {
                     }
                 };
 
-                Exchange exchangeIn = domain.createExchange(service, ExchangePattern.IN_OUT, responseExchangeHandler);
 
-                Message sendMessage = prepareSend(exchangeIn, args, method);
-                exchangeIn.send(sendMessage);
+                Exchange exchangeIn = createExchange(domain, service, method, responseExchangeHandler);
+                exchangeIn.send(exchangeIn.createMessage().setContent(args));
 
                 Exchange exchangeOut = responseQueue.take();
                 if(exchangeOut.getState() == ExchangeState.OK) {
@@ -299,20 +298,22 @@ public class ClientProxyBean implements Bean {
                     }
                 }
             } else {
-                Exchange exchange = domain.createExchange(service, ExchangePattern.IN_ONLY, null);
-
-                Message sendMessage = prepareSend(exchange, args, method);
-                exchange.send(sendMessage);
+                Exchange exchange = createExchange(domain, service, method, null);
+                exchange.send(exchange.createMessage().setContent(args));
 
                 return null;
             }
         }
 
-        private Message prepareSend(Exchange exchange, Object[] args, Method method) {
-            ServiceOperation.Name.set(exchange, method.getName());
-            Message inMessage = exchange.createMessage();
-            inMessage.setContent(args);
-            return inMessage;
+        private Exchange createExchange(ServiceDomain domain, org.switchyard.Service service, Method method, ExchangeHandler responseExchangeHandler) throws BeanComponentException {
+            String operationName = method.getName();
+            ServiceOperation operation = service.getInterface().getOperation(operationName);
+
+            if(operation == null) {
+                throw new BeanComponentException("Bean Component invocation failure.  Operation '" + operationName + "' is not defined on Service '" + serviceQName + "'.");
+            }
+
+            return domain.createExchange(service, new DefaultExchangeContract(operation), responseExchangeHandler);
         }
 
     }

@@ -75,7 +75,7 @@ public class BeanServiceMetadata {
      */
     public Invocation getInvocation(Exchange exchange) throws BeanComponentException {
 
-        String operationName = ServiceOperation.Name.get(exchange);
+        String operationName = exchange.getContract().getServiceOperation().getName();
 
         if (operationName != null) {
             List<Method> candidateMethods = getCandidateMethods(operationName);

@@ -28,7 +28,10 @@ import org.switchyard.*;
 import org.switchyard.component.bean.AbstractCDITest;
 import org.switchyard.component.bean.omservice.model.OrderRequest;
 import org.switchyard.component.bean.omservice.model.OrderResponse;
+import org.switchyard.contract.DefaultExchangeContract;
+import org.switchyard.contract.ExchangeContract;
 import org.switchyard.internal.ServiceDomains;
+import org.switchyard.metadata.InOutOperation;
 import org.switchyard.metadata.ServiceOperation;
 
 import javax.xml.namespace.QName;
@@ -45,10 +48,8 @@ public class BasicInOutTest extends AbstractCDITest {
         // Consume the OM model...
         MockHandler responseConsumer = new MockHandler();
         org.switchyard.Service service = domain.getService(new QName("BasicOrderManagementService"));
-        Exchange exchange = domain.createExchange(service, ExchangePattern.IN_OUT, responseConsumer);
+        Exchange exchange = domain.createExchange(service, new DefaultExchangeContract(new InOutOperation("createOrder")), responseConsumer);
 
-        ServiceOperation.Name.set(exchange, "createOrder");
-        
         Message inMessage = exchange.createMessage();
         inMessage.setContent(new OrderRequest("D123", "ABCD"));
 

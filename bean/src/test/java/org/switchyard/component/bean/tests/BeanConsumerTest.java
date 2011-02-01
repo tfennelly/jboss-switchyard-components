@@ -33,7 +33,11 @@ import org.switchyard.MockHandler;
 import org.switchyard.ServiceDomain;
 import org.switchyard.component.bean.AbstractCDITest;
 import org.switchyard.component.bean.BeanComponentException;
+import org.switchyard.contract.DefaultExchangeContract;
+import org.switchyard.contract.ExchangeContract;
 import org.switchyard.internal.ServiceDomains;
+import org.switchyard.metadata.InOnlyOperation;
+import org.switchyard.metadata.InOutOperation;
 import org.switchyard.metadata.ServiceOperation;
 
 /*
@@ -46,9 +50,7 @@ public class BeanConsumerTest extends AbstractCDITest {
         ServiceDomain domain = ServiceDomains.getDomain();
 
         org.switchyard.Service service = domain.getService(new QName("ConsumerBean"));
-        Exchange exchange = domain.createExchange(service, ExchangePattern.IN_ONLY);
-
-        ServiceOperation.Name.set(exchange, "consumeInOnlyService");
+        Exchange exchange = domain.createExchange(service, new DefaultExchangeContract(new InOnlyOperation("consumeInOnlyService")));
 
         Message inMessage = exchange.createMessage().setContent("hello");
 
@@ -62,10 +64,8 @@ public class BeanConsumerTest extends AbstractCDITest {
 
         MockHandler responseConsumer = new MockHandler();
         org.switchyard.Service service = domain.getService(new QName("ConsumerBean"));
-        Exchange exchange = domain.createExchange(service, ExchangePattern.IN_OUT, responseConsumer);
+        Exchange exchange = domain.createExchange(service, new DefaultExchangeContract(new InOutOperation("consumeInOutService")), responseConsumer);
 
-        ServiceOperation.Name.set(exchange, "consumeInOutService");
-        
         Message inMessage = exchange.createMessage().setContent("hello");
 
         exchange.send(inMessage);
@@ -80,9 +80,7 @@ public class BeanConsumerTest extends AbstractCDITest {
 
         MockHandler responseConsumer = new MockHandler();
         org.switchyard.Service service = domain.getService(new QName("ConsumerBean"));
-        Exchange exchange = domain.createExchange(service, ExchangePattern.IN_OUT, responseConsumer);
-
-        ServiceOperation.Name.set(exchange, "unknownXOp");
+        Exchange exchange = domain.createExchange(service, new DefaultExchangeContract(new InOutOperation("unknownXOp")), responseConsumer);
 
         Message inMessage = exchange.createMessage().setContent("hello");
 
@@ -101,9 +99,7 @@ public class BeanConsumerTest extends AbstractCDITest {
 
         MockHandler responseConsumer = new MockHandler();
         org.switchyard.Service service = domain.getService(new QName("ConsumerBean"));
-        Exchange exchange = domain.createExchange(service, ExchangePattern.IN_OUT, responseConsumer);
-
-        ServiceOperation.Name.set(exchange, "consumeInOutService");
+        Exchange exchange = domain.createExchange(service, new DefaultExchangeContract(new InOutOperation("consumeInOutService")), responseConsumer);
 
         Message inMessage = exchange.createMessage().setContent(
                 new ConsumerException("throw me a remote exception please!!"));
