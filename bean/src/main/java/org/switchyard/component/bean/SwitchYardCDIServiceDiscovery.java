@@ -74,7 +74,7 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
      * @param beanManager CDI Bean Manager instance.
      */
     public void afterBeanDiscovery(@Observes AfterBeanDiscovery abd, BeanManager beanManager) {
-        ApplicationServiceDescriptorSet appDescriptorSet = ApplicationServiceDescriptorSet.lookup();
+        ApplicationServiceDescriptorSet appDescriptorSet = ApplicationServiceDescriptorSet.bind();
         Set<Bean<?>> allBeans = beanManager.getBeans(Object.class, new AnnotationLiteral<Any>() {
         });
 
