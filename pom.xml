@@ -28,6 +28,7 @@
 
     <modules>
         <module>bean</module>
+        <module>cditest</module>
         <module>soap</module>
         <module>tests</module>
     </modules>

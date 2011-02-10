@@ -20,28 +20,18 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.switchyard.component.bean;
+package org.switchyard.component.bean.deploy;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+import org.switchyard.ExchangeHandler;
 
-import static java.lang.annotation.ElementType.*;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import javax.xml.namespace.QName;
 
 /**
- * Bean Service Annotation.
- *
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
- * @see org.switchyard.component.bean.Reference
  */
-@Target({TYPE, FIELD })
-@Retention(RUNTIME)
-@Documented
-public @interface Service {
+public interface ServiceDescriptor {
 
-    /**
-     * Get the Service Interface for the Service.
-     */
-    Class<?> value();
+    QName getServiceName();
+
+    ExchangeHandler getHandler();
 }

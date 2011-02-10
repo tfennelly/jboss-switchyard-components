@@ -30,11 +30,9 @@ import java.util.List;
 import java.util.Set;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.context.spi.CreationalContext;
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Any;
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
-import javax.enterprise.inject.spi.AfterDeploymentValidation;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.Extension;
@@ -42,10 +40,9 @@ import javax.enterprise.inject.spi.InjectionPoint;
 import javax.enterprise.util.AnnotationLiteral;
 import javax.xml.namespace.QName;
 
-import org.switchyard.ServiceDomain;
-import org.switchyard.internal.DefaultHandlerChain;
+import org.switchyard.component.bean.deploy.ApplicationServiceDescriptorSet;
+import org.switchyard.component.bean.deploy.CDIBeanServiceDescriptor;
 import org.switchyard.internal.ServiceDomains;
-import org.switchyard.metadata.java.JavaService;
 import org.switchyard.transform.Transformer;
 
 /**
@@ -57,16 +54,12 @@ import org.switchyard.transform.Transformer;
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
 @ApplicationScoped
-public class SwitchYardCDIExtension implements Extension {
+public class SwitchYardCDIServiceDiscovery implements Extension {
 
     /**
      * List of created {@link ClientProxyBean} instances.
      */
     private List<ClientProxyBean> _createdProxyBeans = new ArrayList<ClientProxyBean>();
-    /**
-     * List of service beans.
-     */
-    private List<Bean<?>> _serviceBeans = new ArrayList<Bean<?>>();
 
     /**
      * {@link javax.enterprise.inject.spi.AfterBeanDiscovery} CDI event observer.
@@ -81,7 +74,7 @@ public class SwitchYardCDIExtension implements Extension {
      * @param beanManager CDI Bean Manager instance.
      */
     public void afterBeanDiscovery(@Observes AfterBeanDiscovery abd, BeanManager beanManager) {
-        ServiceDomain domain = ServiceDomains.getDomain();
+        ApplicationServiceDescriptorSet appDescriptorSet = ApplicationServiceDescriptorSet.lookup();
         Set<Bean<?>> allBeans = beanManager.getBeans(Object.class, new AnnotationLiteral<Any>() {
         });
 
@@ -108,7 +101,7 @@ public class SwitchYardCDIExtension implements Extension {
                 Class<?> serviceType = bean.getBeanClass();
                 Service serviceAnnotation = serviceType.getAnnotation(Service.class);
 
-                _serviceBeans.add(bean);
+                appDescriptorSet.addDescriptor(new CDIBeanServiceDescriptor(bean, beanManager));
                 if (serviceType.isInterface()) {
                     addInjectableClientProxyBean(bean, serviceType, serviceAnnotation, beanManager, abd);
                 }
@@ -120,7 +113,7 @@ public class SwitchYardCDIExtension implements Extension {
 
                 // TODO: Should probably only auto register a transformer based on an annotation or interface ??
                 try {
-                    domain.getTransformerRegistry().addTransformer((Transformer) transformerRT.newInstance());
+                    ServiceDomains.getDomain().getTransformerRegistry().addTransformer((Transformer) transformerRT.newInstance());
                 } catch (InstantiationException e) {
                     throw new IllegalStateException("Invalid Transformer implementation '" + transformerRT.getName() + "'.", e);
                 } catch (IllegalAccessException e) {
@@ -128,52 +121,6 @@ public class SwitchYardCDIExtension implements Extension {
                 }
             }
         }
-    }
-
-    /**
-     * {@link AfterDeploymentValidation} CDI event observer.
-     * <p/>
-     * Responsible for the following:
-     * <ol>
-     * <li>Creates and registers (with the ESB {@link org.switchyard.ServiceDomain Service Domain})
-     * all the {@link ServiceProxyHandler} instances for all {@link Service} annotated beans.</li>
-     * </ol>
-     *
-     * @param adv         CDI Event instance.
-     * @param beanManager CDI Bean Manager instance.
-     */
-    public void afterDeploymentValidation(@Observes AfterDeploymentValidation adv, BeanManager beanManager) {
-        for (Bean<?> bean : _serviceBeans) {
-            Class<?> serviceType = bean.getBeanClass();
-            Service serviceAnnotation = serviceType.getAnnotation(Service.class);
-
-            registerESBServiceProxyHandler(bean, serviceType, serviceAnnotation, beanManager);
-        }
-    }
-
-    private void registerESBServiceProxyHandler(Bean<?> serviceBean, Class<?> serviceType, Service serviceAnnotation, BeanManager beanManager) {
-        CreationalContext creationalContext = beanManager.createCreationalContext(serviceBean);
-        Object beanRef = beanManager.getReference(serviceBean, Object.class, creationalContext);
-        BeanServiceMetadata serviceMetadata = new BeanServiceMetadata(serviceType);
-        ServiceProxyHandler proxyHandler = new ServiceProxyHandler(beanRef, serviceMetadata);
-        Class<?>[] serviceInterfaces = serviceAnnotation.value();
-
-        if (serviceInterfaces == null || serviceInterfaces.length == 0) {
-            registerESBServiceProxyHandler(proxyHandler, beanRef.getClass());
-        } else {
-            for (Class<?> serviceInterface : serviceInterfaces) {
-                registerESBServiceProxyHandler(proxyHandler, serviceInterface);
-            }
-        }
-    }
-
-    private void registerESBServiceProxyHandler(ServiceProxyHandler proxyHandler, Class<?> serviceType) {
-        QName serviceQName = toServiceQName(serviceType);
-
-        // Register the Service in the ESB domain...
-        DefaultHandlerChain handlerChain = new DefaultHandlerChain();
-        handlerChain.addLast("serviceProxy", proxyHandler);
-        ServiceDomains.getDomain().registerService(serviceQName, handlerChain, JavaService.fromClass(serviceType));
     }
 
     private void addInjectableClientProxyBean(Bean<?> serviceBean, Class<?> serviceType, Service serviceAnnotation, BeanManager beanManager, AfterBeanDiscovery abd) {
