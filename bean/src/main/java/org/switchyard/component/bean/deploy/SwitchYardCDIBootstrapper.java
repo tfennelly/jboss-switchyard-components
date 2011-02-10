@@ -31,6 +31,7 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.BeforeShutdown;
 import javax.enterprise.inject.spi.Extension;
 import javax.xml.namespace.QName;
+import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -39,7 +40,7 @@ import java.io.InputStream;
 @ApplicationScoped
 public class SwitchYardCDIBootstrapper implements Extension {
 
-    private ApplicationServiceDescriptorSet appDescriptorSet;
+    private Deployer deployer;
 
     /**
      * {@link AfterDeploymentValidation} CDI event observer.
@@ -50,18 +51,12 @@ public class SwitchYardCDIBootstrapper implements Extension {
         InputStream swConfigStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("META-INF/switchyard.xml");
 
         if(swConfigStream != null) {
-            // Fire deploy, passing the switchyard config...
-
-//            Keith's BeanComponent can do the following to get the services from java:comp...
-//
-//            ApplicationServiceDescriptorSet appDescriptorSet = ApplicationServiceDescriptorSet.lookup();
-//
-//            for (ServiceDescriptor descriptor : appDescriptorSet.getDescriptors()) {
-//                QName serviceName = descriptor.getServiceName();
-//                ExchangeHandler serviceHandler = descriptor.getHandler();
-//
-//                // etc....
-//            }
+            try {
+                deployer = new Deployer(swConfigStream);
+            } catch (IOException e) {
+                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            }
+            deployer.deploy();
         }
     }
 
@@ -71,8 +66,8 @@ public class SwitchYardCDIBootstrapper implements Extension {
      * @param event       CDI Event instance.
      */
     public void beforeShutdown(@Observes BeforeShutdown event) {
-        if(appDescriptorSet != null) {
-            // Fire the undeploy...
+        if(deployer != null) {
+            deployer.undeploy();
         }
     }
 }
