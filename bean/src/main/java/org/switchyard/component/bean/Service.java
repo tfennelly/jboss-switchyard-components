@@ -43,5 +43,5 @@ public @interface Service {
     /**
      * Get the Service Interface for the Service.
      */
-    Class<?> value();
+    Class<?>[] value() default { };
 }

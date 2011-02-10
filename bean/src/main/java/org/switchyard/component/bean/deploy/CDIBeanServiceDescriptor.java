@@ -64,6 +64,12 @@ public class CDIBeanServiceDescriptor implements ServiceDescriptor {
     private Class<?> getServiceInterface(Bean bean) {
         Class<?> beanClass = bean.getBeanClass();
         Service serviceAnnotation = beanClass.getAnnotation(Service.class);
-        return serviceAnnotation.value();
+        Class<?>[] interfaces = serviceAnnotation.value();
+
+        if (interfaces == null || interfaces.length != 1) {
+            throw new RuntimeException("@Service annotation must have exactly one Service interface defined.");
+        }
+
+        return interfaces[0];
     }
 }
