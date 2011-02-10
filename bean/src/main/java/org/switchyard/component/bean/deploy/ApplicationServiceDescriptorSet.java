@@ -45,19 +45,30 @@ public class ApplicationServiceDescriptorSet {
     public List<ServiceDescriptor> getDescriptors() {
         return Collections.unmodifiableList(_descriptorSet);
     }
+    
+    public static ApplicationServiceDescriptorSet bind() {
+        try {
+            Context jndiContext = new InitialContext();
+
+            try {
+                ApplicationServiceDescriptorSet descriptorSet = new ApplicationServiceDescriptorSet();
+                jndiContext.bind(JAVA_COMP_SWITCHYARD_SERVICE_DESCRIPTOR_SET, descriptorSet);
+                return descriptorSet;
+            } finally {
+                jndiContext.close();
+            }
+        } catch (NamingException e) {
+            throw new IllegalStateException("Unexpected NamingException getting JNDI Context.", e);
+        }
+    }
 
     public static ApplicationServiceDescriptorSet lookup() {
         try {
             Context jndiContext = new InitialContext();
 
             try {
-                ApplicationServiceDescriptorSet descriptorSet = (ApplicationServiceDescriptorSet) jndiContext.lookup(JAVA_COMP_SWITCHYARD_SERVICE_DESCRIPTOR_SET);
-
-                if (descriptorSet == null) {
-                    descriptorSet = new ApplicationServiceDescriptorSet();
-                    jndiContext.bind(JAVA_COMP_SWITCHYARD_SERVICE_DESCRIPTOR_SET, descriptorSet);
-                }
-
+                ApplicationServiceDescriptorSet descriptorSet = (ApplicationServiceDescriptorSet) 
+                    jndiContext.lookup(JAVA_COMP_SWITCHYARD_SERVICE_DESCRIPTOR_SET);
                 return descriptorSet;
             } finally {
                 jndiContext.close();
