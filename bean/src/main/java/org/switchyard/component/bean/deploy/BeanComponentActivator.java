@@ -55,7 +55,7 @@ public class BeanComponentActivator implements ImplementationActivator {
             }
         }
 
-        throw new RuntimeException("Unknown Service name");
+        throw new RuntimeException("Unknown Service name '" + name + "'.");
     }
 
     @Override
