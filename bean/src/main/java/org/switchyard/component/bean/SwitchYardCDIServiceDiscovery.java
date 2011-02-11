@@ -35,9 +35,11 @@ import javax.enterprise.inject.Any;
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
+import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.BeforeShutdown;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.InjectionPoint;
+import javax.enterprise.inject.spi.ProcessBean;
 import javax.enterprise.util.AnnotationLiteral;
 import javax.xml.namespace.QName;
 
@@ -58,69 +60,82 @@ import org.switchyard.transform.Transformer;
 public class SwitchYardCDIServiceDiscovery implements Extension {
 
     /**
+     * Application Service Descriptor set.
+     */
+    private ApplicationServiceDescriptorSet appDescriptorSet;
+    /**
      * List of created {@link ClientProxyBean} instances.
      */
     private List<ClientProxyBean> _createdProxyBeans = new ArrayList<ClientProxyBean>();
 
     /**
-     * {@link javax.enterprise.inject.spi.AfterBeanDiscovery} CDI event observer.
-     * <p/>
-     * Responsible for the following:
-     * <ol>
-     * <li>Creates and registers (with the CDI {@link BeanManager Bean Manager}) all the {@link ClientProxyBean}
-     * instances for all {@link org.switchyard.component.bean.Reference} injection points.</li>
-     * </ol>
+     * {@link javax.enterprise.inject.spi.BeforeBeanDiscovery} CDI event observer.
      *
-     * @param abd         CDI Event instance.
+     * @param beforeEvent CDI Event instance.
+     */
+    public void beforeBeanDiscovery(@Observes BeforeBeanDiscovery beforeEvent) {
+        appDescriptorSet = ApplicationServiceDescriptorSet.bind();
+    }
+
+    /**
+     * {@link javax.enterprise.inject.spi.ProcessBean} CDI event observer.
+     *
+     * @param processBean CDI Event instance.
      * @param beanManager CDI Bean Manager instance.
      */
-    public void afterBeanDiscovery(@Observes AfterBeanDiscovery abd, BeanManager beanManager) {
-        ApplicationServiceDescriptorSet appDescriptorSet = ApplicationServiceDescriptorSet.bind();
-        Set<Bean<?>> allBeans = beanManager.getBeans(Object.class, new AnnotationLiteral<Any>() {
-        });
+    public void processBean(@Observes ProcessBean processBean, BeanManager beanManager) {
+        Bean<?> bean = processBean.getBean();
+        Set<InjectionPoint> injectionPoints = bean.getInjectionPoints();
 
-        for (Bean<?> bean : allBeans) {
-            Set<InjectionPoint> injectionPoints = bean.getInjectionPoints();
-
-            // Create proxies for the relevant injection points...
-            for (InjectionPoint injectionPoint : injectionPoints) {
-                for (Annotation qualifier : injectionPoint.getQualifiers()) {
-                    if (Reference.class.isAssignableFrom(qualifier.annotationType())) {
-                        Member member = injectionPoint.getMember();
-                        if (member instanceof Field) {
-                            Class<?> memberType = ((Field) member).getType();
-                            if (memberType.isInterface()) {
-                                addInjectableClientProxyBean((Field) member, (Reference) qualifier, injectionPoint.getQualifiers(), beanManager, abd);
-                            }
+        // Create proxies for the relevant injection points...
+        for (InjectionPoint injectionPoint : injectionPoints) {
+            for (Annotation qualifier : injectionPoint.getQualifiers()) {
+                if (Reference.class.isAssignableFrom(qualifier.annotationType())) {
+                    Member member = injectionPoint.getMember();
+                    if (member instanceof Field) {
+                        Class<?> memberType = ((Field) member).getType();
+                        if (memberType.isInterface()) {
+                            addInjectableClientProxyBean((Field) member, (Reference) qualifier, injectionPoint.getQualifiers(), beanManager);
                         }
                     }
                 }
             }
+        }
 
-            // Create Service Proxy ExchangeHandlers and register them as Services, for all @Service beans...
-            if (isServiceBean(bean)) {
-                Class<?> serviceType = bean.getBeanClass();
-                Service serviceAnnotation = serviceType.getAnnotation(Service.class);
+        // Create Service Proxy ExchangeHandlers and register them as Services, for all @Service beans...
+        if (isServiceBean(bean)) {
+            Class<?> serviceType = bean.getBeanClass();
+            Service serviceAnnotation = serviceType.getAnnotation(Service.class);
 
-                appDescriptorSet.addDescriptor(new CDIBeanServiceDescriptor(bean, beanManager));
-                if (serviceType.isInterface()) {
-                    addInjectableClientProxyBean(bean, serviceType, serviceAnnotation, beanManager, abd);
-                }
+            appDescriptorSet.addDescriptor(new CDIBeanServiceDescriptor(bean, beanManager));
+            if (serviceType.isInterface()) {
+                addInjectableClientProxyBean(bean, serviceType, serviceAnnotation, beanManager);
             }
+        }
 
-            // Register all transformers we can find...
-            if (Transformer.class.isAssignableFrom(bean.getBeanClass())) {
-                Class<?> transformerRT = bean.getBeanClass();
+        // Register all transformers we can find...
+        if (Transformer.class.isAssignableFrom(bean.getBeanClass())) {
+            Class<?> transformerRT = bean.getBeanClass();
 
-                // TODO: Should probably only auto register a transformer based on an annotation or interface ??
-                try {
-                    ServiceDomains.getDomain().getTransformerRegistry().addTransformer((Transformer) transformerRT.newInstance());
-                } catch (InstantiationException e) {
-                    throw new IllegalStateException("Invalid Transformer implementation '" + transformerRT.getName() + "'.", e);
-                } catch (IllegalAccessException e) {
-                    throw new IllegalStateException("Invalid Transformer implementation '" + transformerRT.getName() + "'.", e);
-                }
+            // TODO: Should probably only auto register a transformer based on an annotation or interface ??
+            try {
+                ServiceDomains.getDomain().getTransformerRegistry().addTransformer((Transformer) transformerRT.newInstance());
+            } catch (InstantiationException e) {
+                throw new IllegalStateException("Invalid Transformer implementation '" + transformerRT.getName() + "'.", e);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException("Invalid Transformer implementation '" + transformerRT.getName() + "'.", e);
             }
+        }
+    }
+
+    /**
+     * {@link javax.enterprise.inject.spi.ProcessBean} CDI event observer.
+     *
+     * @param afterEvent  CDI Event instance.
+     */
+    public void afterBeanDiscovery(@Observes AfterBeanDiscovery afterEvent) {
+        for (ClientProxyBean proxyBean : _createdProxyBeans) {
+            afterEvent.addBean(proxyBean);
         }
     }
 
@@ -129,22 +144,22 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
      *
      * @param event       CDI Event instance.
      */
-    public void beforeShutdown(@Observes BeforeShutdown event) {
+    public void beforeShutdown(@Observes BeforeShutdown event, BeanManager beanManager) {
         ApplicationServiceDescriptorSet.unbind();
     }
 
-    private void addInjectableClientProxyBean(Bean<?> serviceBean, Class<?> serviceType, Service serviceAnnotation, BeanManager beanManager, AfterBeanDiscovery abd) {
+    private void addInjectableClientProxyBean(Bean<?> serviceBean, Class<?> serviceType, Service serviceAnnotation, BeanManager beanManager) {
         QName serviceQName = toServiceQName(serviceType);
-        addClientProxyBean(serviceQName, serviceType, null, abd);
+        addClientProxyBean(serviceQName, serviceType, null);
     }
 
-    private void addInjectableClientProxyBean(Field injectionPointField, Reference serviceReference, Set<Annotation> qualifiers, BeanManager beanManager, AfterBeanDiscovery abd) {
+    private void addInjectableClientProxyBean(Field injectionPointField, Reference serviceReference, Set<Annotation> qualifiers, BeanManager beanManager) {
         QName serviceQName = toServiceQName(injectionPointField.getType());
 
-        addClientProxyBean(serviceQName, injectionPointField.getType(), qualifiers, abd);
+        addClientProxyBean(serviceQName, injectionPointField.getType(), qualifiers);
     }
 
-    private void addClientProxyBean(QName serviceQName, Class<?> beanClass, Set<Annotation> qualifiers, AfterBeanDiscovery abd) {
+    private void addClientProxyBean(QName serviceQName, Class<?> beanClass, Set<Annotation> qualifiers) {
         // Check do we already have a proxy for this service interface...
         for (ClientProxyBean clientProxyBean : _createdProxyBeans) {
             if (serviceQName.equals(clientProxyBean.getServiceQName()) && beanClass == clientProxyBean.getBeanClass()) {
@@ -155,7 +170,6 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
 
         ClientProxyBean clientProxyBean = new ClientProxyBean(serviceQName, beanClass, qualifiers);
         _createdProxyBeans.add(clientProxyBean);
-        abd.addBean(clientProxyBean);
     }
 
     private boolean isServiceBean(Bean<?> bean) {
