@@ -25,11 +25,12 @@ package org.switchyard.component.bean.deploy;
 import org.switchyard.ExchangeHandler;
 
 import javax.xml.namespace.QName;
+import java.io.Serializable;
 
 /**
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
-public interface ServiceDescriptor {
+public interface ServiceDescriptor extends Serializable {
 
     QName getServiceName();
 

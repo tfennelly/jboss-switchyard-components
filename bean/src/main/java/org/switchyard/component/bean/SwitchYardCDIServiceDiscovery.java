@@ -35,6 +35,7 @@ import javax.enterprise.inject.Any;
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
+import javax.enterprise.inject.spi.BeforeShutdown;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.InjectionPoint;
 import javax.enterprise.util.AnnotationLiteral;
@@ -121,6 +122,15 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
                 }
             }
         }
+    }
+
+    /**
+     * {@link javax.enterprise.inject.spi.BeforeShutdown} CDI event observer.
+     *
+     * @param event       CDI Event instance.
+     */
+    public void beforeShutdown(@Observes BeforeShutdown event) {
+        ApplicationServiceDescriptorSet.unbind();
     }
 
     private void addInjectableClientProxyBean(Bean<?> serviceBean, Class<?> serviceType, Service serviceAnnotation, BeanManager beanManager, AfterBeanDiscovery abd) {
