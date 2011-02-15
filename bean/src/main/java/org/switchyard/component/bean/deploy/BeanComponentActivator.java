@@ -26,13 +26,13 @@ import javax.xml.namespace.QName;
 
 import org.switchyard.ExchangeHandler;
 import org.switchyard.Service;
-import org.switchyard.config.model.composite.InternalServiceModel;
-import org.switchyard.deploy.ImplementationActivator;
+import org.switchyard.config.model.Model;
+import org.switchyard.deploy.Activator;
 
 /**
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
-public class BeanComponentActivator implements ImplementationActivator {
+public class BeanComponentActivator implements Activator {
 
     private ApplicationServiceDescriptorSet _appDescriptorSet;
 
@@ -41,14 +41,14 @@ public class BeanComponentActivator implements ImplementationActivator {
     }
 
     @Override
-    public void activateReference(QName name, Service service) {
+    public void destroy(Service service) {
         // TODO Auto-generated method stub
         
     }
 
+
     @Override
-    public ExchangeHandler activateService(QName name,
-            InternalServiceModel config) {
+    public ExchangeHandler init(QName name, Model config) {
         for (ServiceDescriptor descriptor : _appDescriptorSet.getDescriptors()) {
             if(descriptor.getServiceName().equals(name)) {
                 return descriptor.getHandler();
@@ -58,15 +58,18 @@ public class BeanComponentActivator implements ImplementationActivator {
         throw new RuntimeException("Unknown Service name '" + name + "'.");
     }
 
+
     @Override
-    public void deactivateReference(QName name) {
+    public void start(Service service) {
         // TODO Auto-generated method stub
         
     }
 
+
     @Override
-    public void deactivateService(Service service) {
+    public void stop(Service service) {
         // TODO Auto-generated method stub
         
     }
+
 }
