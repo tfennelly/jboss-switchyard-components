@@ -118,8 +118,9 @@ public class InboundHandler extends BaseHandler {
      * Start lifecycle.
      * @throws WebServicePublishException If unable to publish the endpoint
      */
-    public void start() throws WebServicePublishException {
+    public void start(Service service) throws WebServicePublishException {
         try {
+            _service = service;
             PortName portName = _config.getPort();
             javax.wsdl.Service wsdlService = WSDLUtil.getService(_config.getWsdl(), portName);
             _wsdlPort = WSDLUtil.getPort(wsdlService, portName);
@@ -131,13 +132,7 @@ public class InboundHandler extends BaseHandler {
             // Hook the handler
             wsProvider.setConsumer(this);
             
-            // lookup the SwitchYard service
-            _service = _domain.getService(_config.getServiceName());
-            if (_service == null) {
-                throw new WebServicePublishException(
-                        "Target service not registered: " + _config.getServiceName());
-            }
-            _contracts.putAll(WSDLUtil.getContracts(_wsdlPort,_service));
+            _contracts.putAll(WSDLUtil.getContracts(_wsdlPort, service));
 
             _endpoint = Endpoint.create(wsProvider);
             List<Source> metadata = new ArrayList<Source>();

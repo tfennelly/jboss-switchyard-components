@@ -22,11 +22,16 @@
 
 package org.switchyard.component.bean.deploy;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import javax.xml.namespace.QName;
 
 import org.switchyard.ExchangeHandler;
 import org.switchyard.Service;
 import org.switchyard.config.model.Model;
+import org.switchyard.config.model.composite.InternalServiceModel;
+import org.switchyard.config.model.composite.ReferenceModel;
 import org.switchyard.deploy.Activator;
 
 /**
@@ -35,41 +40,50 @@ import org.switchyard.deploy.Activator;
 public class BeanComponentActivator implements Activator {
 
     private ApplicationServiceDescriptorSet _appDescriptorSet;
+    private Map<QName, ReferenceModel> _references = new HashMap<QName, ReferenceModel>();
 
     public BeanComponentActivator() {
         _appDescriptorSet = ApplicationServiceDescriptorSet.lookup();
     }
 
-    @Override
-    public void destroy(Service service) {
-        // TODO Auto-generated method stub
-        
-    }
-
 
     @Override
     public ExchangeHandler init(QName name, Model config) {
-        for (ServiceDescriptor descriptor : _appDescriptorSet.getDescriptors()) {
-            if(descriptor.getServiceName().equals(name)) {
-                return descriptor.getHandler();
+        if (config instanceof ReferenceModel) {
+            // policy and configuration validation can be performed here - 
+            // nothing to do for now
+            _references.put(name, (ReferenceModel)config);
+            return null;
+        } else if (config instanceof InternalServiceModel) {
+            // lookup the handler for the initialized service
+            for (ServiceDescriptor descriptor : _appDescriptorSet.getDescriptors()) {
+                if(descriptor.getServiceName().equals(name)) {
+                    return descriptor.getHandler();
+                }
             }
         }
-
+        // bean discovery did not find a bean providing this service
         throw new RuntimeException("Unknown Service name '" + name + "'.");
     }
 
 
     @Override
     public void start(Service service) {
-        // TODO Auto-generated method stub
-        
+        if (_references.containsKey(service.getName())) {
+            // client proxies can be built here
+        }
     }
 
 
     @Override
     public void stop(Service service) {
-        // TODO Auto-generated method stub
-        
+        // not sure this is significant for bean component
     }
+
+    @Override
+    public void destroy(Service service) {
+        _references.remove(service.getName());
+    }
+
 
 }
