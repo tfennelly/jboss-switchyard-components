@@ -30,7 +30,7 @@ import org.switchyard.component.soap.InboundHandler;
 import org.switchyard.component.soap.config.model.SOAPBindingModel;
 import org.switchyard.config.model.Model;
 import org.switchyard.config.model.composite.BindingModel;
-import org.switchyard.config.model.composite.ExternalServiceModel;
+import org.switchyard.config.model.composite.CompositeServiceModel;
 import org.switchyard.deploy.Activator;
 
 public class SOAPActivator implements Activator {
@@ -41,8 +41,8 @@ public class SOAPActivator implements Activator {
 
     @Override
     public ExchangeHandler init(QName name, Model config) {
-        if (config instanceof ExternalServiceModel) {
-            for (BindingModel binding : ((ExternalServiceModel)config).getBindings()) {
+        if (config instanceof CompositeServiceModel) {
+            for (BindingModel binding : ((CompositeServiceModel)config).getBindings()) {
                 if (binding instanceof SOAPBindingModel) {
                     InboundHandler handler = new InboundHandler((SOAPBindingModel)binding);
                     _inboundGateways.put(name, handler);

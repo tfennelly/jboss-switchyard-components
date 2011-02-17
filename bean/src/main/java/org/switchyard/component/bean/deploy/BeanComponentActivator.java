@@ -30,8 +30,8 @@ import javax.xml.namespace.QName;
 import org.switchyard.ExchangeHandler;
 import org.switchyard.Service;
 import org.switchyard.config.model.Model;
-import org.switchyard.config.model.composite.InternalServiceModel;
-import org.switchyard.config.model.composite.ReferenceModel;
+import org.switchyard.config.model.composite.ComponentReferenceModel;
+import org.switchyard.config.model.composite.ComponentServiceModel;
 import org.switchyard.deploy.Activator;
 
 /**
@@ -40,7 +40,7 @@ import org.switchyard.deploy.Activator;
 public class BeanComponentActivator implements Activator {
 
     private ApplicationServiceDescriptorSet _appDescriptorSet;
-    private Map<QName, ReferenceModel> _references = new HashMap<QName, ReferenceModel>();
+    private Map<QName, ComponentReferenceModel> _references = new HashMap<QName, ComponentReferenceModel>();
 
     public BeanComponentActivator() {
         _appDescriptorSet = ApplicationServiceDescriptorSet.lookup();
@@ -49,12 +49,12 @@ public class BeanComponentActivator implements Activator {
 
     @Override
     public ExchangeHandler init(QName name, Model config) {
-        if (config instanceof ReferenceModel) {
+        if (config instanceof ComponentReferenceModel) {
             // policy and configuration validation can be performed here - 
             // nothing to do for now
-            _references.put(name, (ReferenceModel)config);
+            _references.put(name, (ComponentReferenceModel)config);
             return null;
-        } else if (config instanceof InternalServiceModel) {
+        } else if (config instanceof ComponentServiceModel) {
             // lookup the handler for the initialized service
             for (ServiceDescriptor descriptor : _appDescriptorSet.getDescriptors()) {
                 if(descriptor.getServiceName().equals(name)) {
