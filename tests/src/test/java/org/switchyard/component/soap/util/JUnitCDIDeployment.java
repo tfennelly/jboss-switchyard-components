@@ -32,7 +32,7 @@ import org.switchyard.component.bean.deploy.BeanComponentActivator;
 import org.switchyard.component.bean.deploy.BeanDeploymentMetaData;
 import org.switchyard.component.bean.deploy.ServiceDescriptor;
 import org.switchyard.component.soap.HandlerExceptionTransformer;
-import org.switchyard.deploy.internal.AbstractDeployer;
+import org.switchyard.deploy.internal.AbstractDeployment;
 import org.switchyard.metadata.ServiceInterface;
 import org.switchyard.transform.Transformer;
 import org.switchyard.transform.TransformerRegistry;
@@ -44,7 +44,7 @@ import javax.xml.namespace.QName;
 /**
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
-class JUnitCDIDeployer extends AbstractDeployer {
+class JUnitCDIDeployment extends AbstractDeployment {
 
     public void init() {
         deployWeldContainer();
@@ -67,7 +67,7 @@ class JUnitCDIDeployer extends AbstractDeployer {
     }
 
     private void deployTransformers(BeanDeploymentMetaData beanDeploymentMetaData) {
-        TransformerRegistry transformerRegistry = getServiceDomain().getTransformerRegistry();
+        TransformerRegistry transformerRegistry = getDomain().getTransformerRegistry();
 
         for (Transformer transformer : beanDeploymentMetaData.getTransformers()) {
             transformerRegistry.addTransformer(transformer);
@@ -88,8 +88,8 @@ class JUnitCDIDeployer extends AbstractDeployer {
             ServiceInterface serviceInterface;
             Service service;
 
-            serviceInterface = activator.describe(serviceName);
-            service = getServiceDomain().registerService(serviceName, handler, serviceInterface);
+            serviceInterface = activator.buildServiceInterface(serviceName);
+            service = getDomain().registerService(serviceName, handler, serviceInterface);
             activator.start(service);
         }
     }

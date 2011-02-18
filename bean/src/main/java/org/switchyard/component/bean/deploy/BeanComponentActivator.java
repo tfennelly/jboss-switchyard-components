@@ -68,8 +68,7 @@ public class BeanComponentActivator implements Activator {
         throw new RuntimeException("Unknown Service name '" + name + "'.");
     }
 
-    @Override
-    public ServiceInterface describe(QName name) {
+    public ServiceInterface buildServiceInterface(QName name) {
         for (ServiceDescriptor descriptor : _beanDeploymentMetaData.getServiceDescriptors()) {
             if(descriptor.getServiceName().equals(name)) {
                 return descriptor.getInterface();

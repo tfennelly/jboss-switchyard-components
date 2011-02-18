@@ -57,11 +57,6 @@ public class SOAPActivator implements Activator {
     }
 
     @Override
-    public ServiceInterface describe(QName name) {
-        throw new UnsupportedOperationException("Unsupported call for a ServiceInterface description on the SOAPActivator.");
-    }
-
-    @Override
     public void start(Service service) {
         if (_inboundGateways.containsKey(service.getName())) {
             try {

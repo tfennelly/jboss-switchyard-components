@@ -34,7 +34,7 @@ import org.switchyard.ServiceDomain;
  */
 public abstract class AbstractCDITest {
 
-    private JUnitCDIDeployer deployer;
+    private JUnitCDIDeployment deployment;
 
     @BeforeClass
     public static void installContext() {
@@ -43,17 +43,17 @@ public abstract class AbstractCDITest {
 
     @Before
     public void deploy() throws Exception {
-        deployer = new JUnitCDIDeployer();
-        deployer.init();
+        deployment = new JUnitCDIDeployment();
+        deployment.init();
     }
 
     @After
     public void undeploy() {
-        deployer.destroy();
+        deployment.destroy();
         MockInitialContextFactory.clear();
     }
 
     public ServiceDomain getServiceDomain() {
-        return deployer.getServiceDomain();
+        return deployment.getDomain();
     }
 }
