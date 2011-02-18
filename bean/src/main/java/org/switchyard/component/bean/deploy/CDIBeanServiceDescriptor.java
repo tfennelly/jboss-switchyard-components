@@ -26,6 +26,8 @@ import org.switchyard.ExchangeHandler;
 import org.switchyard.component.bean.BeanServiceMetadata;
 import org.switchyard.component.bean.Service;
 import org.switchyard.component.bean.ServiceProxyHandler;
+import org.switchyard.metadata.ServiceInterface;
+import org.switchyard.metadata.java.JavaService;
 
 import javax.enterprise.context.spi.CreationalContext;
 import javax.enterprise.inject.spi.Bean;
@@ -39,12 +41,14 @@ public class CDIBeanServiceDescriptor implements ServiceDescriptor {
 
     private QName _serviceName;
     private Bean _bean;
+    private BeanServiceMetadata _serviceMetadata;
     private BeanManager _beanManager;
 
     public CDIBeanServiceDescriptor(Bean bean, BeanManager beanManager) {
         this._bean = bean;
         this._beanManager = beanManager;
         this._serviceName = new QName(getServiceInterface(bean).getSimpleName());
+        this._serviceMetadata = new BeanServiceMetadata(getServiceInterface(_bean));
     }
 
     @Override
@@ -56,9 +60,13 @@ public class CDIBeanServiceDescriptor implements ServiceDescriptor {
     public ExchangeHandler getHandler() {
         CreationalContext creationalContext = _beanManager.createCreationalContext(_bean);
         Object beanRef = _beanManager.getReference(_bean, Object.class, creationalContext);
-        BeanServiceMetadata serviceMetadata = new BeanServiceMetadata(getServiceInterface(_bean));
 
-        return new ServiceProxyHandler(beanRef, serviceMetadata);
+        return new ServiceProxyHandler(beanRef, _serviceMetadata);
+    }
+
+    @Override
+    public ServiceInterface getInterface() {
+        return JavaService.fromClass(_serviceMetadata.getServiceClass());
     }
 
     private Class<?> getServiceInterface(Bean bean) {
@@ -67,7 +75,8 @@ public class CDIBeanServiceDescriptor implements ServiceDescriptor {
         Class<?>[] interfaces = serviceAnnotation.value();
 
         if (interfaces == null || interfaces.length != 1) {
-            throw new RuntimeException("@Service annotation must have exactly one Service interface defined.");
+            // TODO: This might change... perhaps a service interface should be mandatory??
+            return beanClass;
         }
 
         return interfaces[0];

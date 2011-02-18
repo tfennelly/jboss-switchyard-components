@@ -22,13 +22,15 @@
 
 package org.switchyard.component.bean.deploy;
 
+import org.switchyard.component.bean.ClientProxyBean;
+import org.switchyard.transform.Transformer;
+
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,43 +38,61 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
-public class ApplicationServiceDescriptorSet implements Serializable {
+public class BeanDeploymentMetaData implements Serializable {
 
     private static final String JAVA_COMP_SWITCHYARD_SERVICE_DESCRIPTOR_SET = "cn=SwitchyardApplicationServiceDescriptorSet";
 
-    private List<ServiceDescriptor> _descriptorSet = new ArrayList<ServiceDescriptor>();
+    private List<ServiceDescriptor> _serviceDescriptors = new ArrayList<ServiceDescriptor>();
+    private List<ClientProxyBean> _clientProxies = new ArrayList<ClientProxyBean>();
+    private List<Transformer> _transformers = new ArrayList<Transformer>();
 
-    public void addDescriptor(ServiceDescriptor handler) {
-        _descriptorSet.add(handler);
+    public void addServiceDescriptor(ServiceDescriptor handler) {
+        _serviceDescriptors.add(handler);
     }
 
-    public List<ServiceDescriptor> getDescriptors() {
-        return Collections.unmodifiableList(_descriptorSet);
-    }
-    
-    public static ApplicationServiceDescriptorSet bind() {
-        Map<ClassLoader, ApplicationServiceDescriptorSet> descriptorMap = getApplicationDescriptorMap();
-        ApplicationServiceDescriptorSet appDescriptorSet = new ApplicationServiceDescriptorSet();
-
-        descriptorMap.put(Thread.currentThread().getContextClassLoader(), appDescriptorSet);
-
-        return appDescriptorSet;
+    public void addClientProxy(ClientProxyBean proxy) {
+        _clientProxies.add(proxy);
     }
 
-    public static ApplicationServiceDescriptorSet lookup() {
-        return getApplicationDescriptorMap().get(Thread.currentThread().getContextClassLoader());
+    public void addTransformer(Transformer transformer) {
+        _transformers.add(transformer);
+    }
+
+    public List<ServiceDescriptor> getServiceDescriptors() {
+        return Collections.unmodifiableList(_serviceDescriptors);
+    }
+
+    public List<ClientProxyBean> getClientProxies() {
+        return Collections.unmodifiableList(_clientProxies);
+    }
+
+    public List<Transformer> getTransformers() {
+        return Collections.unmodifiableList(_transformers);
+    }
+
+    public static BeanDeploymentMetaData bind() {
+        Map<ClassLoader, BeanDeploymentMetaData> metaDataMap = getBeanDeploymentMetaDataMap();
+        BeanDeploymentMetaData deploymentMetaData = new BeanDeploymentMetaData();
+
+        metaDataMap.put(Thread.currentThread().getContextClassLoader(), deploymentMetaData);
+
+        return deploymentMetaData;
+    }
+
+    public static BeanDeploymentMetaData lookup() {
+        return getBeanDeploymentMetaDataMap().get(Thread.currentThread().getContextClassLoader());
     }
 
     public static void unbind() {
-        getApplicationDescriptorMap().remove(Thread.currentThread().getContextClassLoader());
+        getBeanDeploymentMetaDataMap().remove(Thread.currentThread().getContextClassLoader());
     }
 
-    private synchronized static Map<ClassLoader, ApplicationServiceDescriptorSet> getApplicationDescriptorMap() {
+    private synchronized static Map<ClassLoader, BeanDeploymentMetaData> getBeanDeploymentMetaDataMap() {
         try {
             Context jndiContext = new InitialContext();
 
             try {
-                Map<ClassLoader, ApplicationServiceDescriptorSet> descriptorMap = (Map<ClassLoader, ApplicationServiceDescriptorSet>)
+                Map<ClassLoader, BeanDeploymentMetaData> descriptorMap = (Map<ClassLoader, BeanDeploymentMetaData>)
                             jndiContext.lookup(JAVA_COMP_SWITCHYARD_SERVICE_DESCRIPTOR_SET);
 
                 return descriptorMap;
@@ -84,8 +104,8 @@ public class ApplicationServiceDescriptorSet implements Serializable {
                 Context jndiContext = new InitialContext();
 
                 try {
-                    Map<ClassLoader, ApplicationServiceDescriptorSet> descriptorMap =
-                            new ConcurrentHashMap<ClassLoader, ApplicationServiceDescriptorSet>();
+                    Map<ClassLoader, BeanDeploymentMetaData> descriptorMap =
+                            new ConcurrentHashMap<ClassLoader, BeanDeploymentMetaData>();
                     jndiContext.bind(JAVA_COMP_SWITCHYARD_SERVICE_DESCRIPTOR_SET, descriptorMap);
 
                     return descriptorMap;

@@ -32,6 +32,7 @@ import org.switchyard.config.model.Model;
 import org.switchyard.config.model.composite.BindingModel;
 import org.switchyard.config.model.composite.CompositeServiceModel;
 import org.switchyard.deploy.Activator;
+import org.switchyard.metadata.ServiceInterface;
 
 public class SOAPActivator implements Activator {
     
@@ -53,6 +54,11 @@ public class SOAPActivator implements Activator {
 
         // no bindings were found, raise a deployment error
         throw new RuntimeException("No SOAP bindings found for service " + name);
+    }
+
+    @Override
+    public ServiceInterface describe(QName name) {
+        throw new UnsupportedOperationException("Unsupported call for a ServiceInterface description on the SOAPActivator.");
     }
 
     @Override

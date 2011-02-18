@@ -29,21 +29,23 @@ import javax.xml.namespace.QName;
 
 import org.switchyard.ExchangeHandler;
 import org.switchyard.Service;
+import org.switchyard.component.bean.ClientProxyBean;
 import org.switchyard.config.model.Model;
 import org.switchyard.config.model.composite.ComponentReferenceModel;
 import org.switchyard.config.model.composite.ComponentServiceModel;
 import org.switchyard.deploy.Activator;
+import org.switchyard.metadata.ServiceInterface;
 
 /**
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
 public class BeanComponentActivator implements Activator {
 
-    private ApplicationServiceDescriptorSet _appDescriptorSet;
+    private BeanDeploymentMetaData _beanDeploymentMetaData;
     private Map<QName, ComponentReferenceModel> _references = new HashMap<QName, ComponentReferenceModel>();
 
     public BeanComponentActivator() {
-        _appDescriptorSet = ApplicationServiceDescriptorSet.lookup();
+        _beanDeploymentMetaData = BeanDeploymentMetaData.lookup();
     }
 
 
@@ -56,7 +58,7 @@ public class BeanComponentActivator implements Activator {
             return null;
         } else if (config instanceof ComponentServiceModel) {
             // lookup the handler for the initialized service
-            for (ServiceDescriptor descriptor : _appDescriptorSet.getDescriptors()) {
+            for (ServiceDescriptor descriptor : _beanDeploymentMetaData.getServiceDescriptors()) {
                 if(descriptor.getServiceName().equals(name)) {
                     return descriptor.getHandler();
                 }
@@ -66,11 +68,24 @@ public class BeanComponentActivator implements Activator {
         throw new RuntimeException("Unknown Service name '" + name + "'.");
     }
 
+    @Override
+    public ServiceInterface describe(QName name) {
+        for (ServiceDescriptor descriptor : _beanDeploymentMetaData.getServiceDescriptors()) {
+            if(descriptor.getServiceName().equals(name)) {
+                return descriptor.getInterface();
+            }
+        }
+        // bean discovery did not find a bean providing this service
+        throw new RuntimeException("Unknown Service name '" + name + "'.");
+    }
 
     @Override
     public void start(Service service) {
-        if (_references.containsKey(service.getName())) {
-            // client proxies can be built here
+        // Initialise any client proxies to the started service...
+        for (ClientProxyBean proxyBean : _beanDeploymentMetaData.getClientProxies()) {
+            if(proxyBean.getServiceQName().equals(service.getName())) {
+                proxyBean.setService(service);
+            }
         }
     }
 

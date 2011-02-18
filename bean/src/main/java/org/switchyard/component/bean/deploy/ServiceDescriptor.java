@@ -23,6 +23,7 @@
 package org.switchyard.component.bean.deploy;
 
 import org.switchyard.ExchangeHandler;
+import org.switchyard.metadata.ServiceInterface;
 
 import javax.xml.namespace.QName;
 import java.io.Serializable;
@@ -35,4 +36,6 @@ public interface ServiceDescriptor extends Serializable {
     QName getServiceName();
 
     ExchangeHandler getHandler();
+
+    ServiceInterface getInterface();
 }

@@ -31,7 +31,6 @@ import java.util.Set;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
-import javax.enterprise.inject.Any;
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
@@ -40,19 +39,14 @@ import javax.enterprise.inject.spi.BeforeShutdown;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.InjectionPoint;
 import javax.enterprise.inject.spi.ProcessBean;
-import javax.enterprise.util.AnnotationLiteral;
 import javax.xml.namespace.QName;
 
-import org.switchyard.component.bean.deploy.ApplicationServiceDescriptorSet;
+import org.switchyard.component.bean.deploy.BeanDeploymentMetaData;
 import org.switchyard.component.bean.deploy.CDIBeanServiceDescriptor;
-import org.switchyard.internal.ServiceDomains;
 import org.switchyard.transform.Transformer;
 
 /**
  * Portable CDI extension for SwitchYard.
- * <p/>
- * See the {@link #afterBeanDiscovery(javax.enterprise.inject.spi.AfterBeanDiscovery, javax.enterprise.inject.spi.BeanManager) afterBeanDiscovery}
- * method.
  *
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
@@ -60,9 +54,9 @@ import org.switchyard.transform.Transformer;
 public class SwitchYardCDIServiceDiscovery implements Extension {
 
     /**
-     * Application Service Descriptor set.
+     * Bean deployment metadata.
      */
-    private ApplicationServiceDescriptorSet appDescriptorSet;
+    private BeanDeploymentMetaData _beanDeploymentMetaData;
     /**
      * List of created {@link ClientProxyBean} instances.
      */
@@ -74,7 +68,7 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
      * @param beforeEvent CDI Event instance.
      */
     public void beforeBeanDiscovery(@Observes BeforeBeanDiscovery beforeEvent) {
-        appDescriptorSet = ApplicationServiceDescriptorSet.bind();
+        _beanDeploymentMetaData = BeanDeploymentMetaData.bind();
     }
 
     /**
@@ -107,7 +101,7 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
             Class<?> serviceType = bean.getBeanClass();
             Service serviceAnnotation = serviceType.getAnnotation(Service.class);
 
-            appDescriptorSet.addDescriptor(new CDIBeanServiceDescriptor(bean, beanManager));
+            _beanDeploymentMetaData.addServiceDescriptor(new CDIBeanServiceDescriptor(bean, beanManager));
             if (serviceType.isInterface()) {
                 addInjectableClientProxyBean(bean, serviceType, serviceAnnotation, beanManager);
             }
@@ -117,9 +111,8 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
         if (Transformer.class.isAssignableFrom(bean.getBeanClass())) {
             Class<?> transformerRT = bean.getBeanClass();
 
-            // TODO: Should probably only auto register a transformer based on an annotation or interface ??
             try {
-                ServiceDomains.getDomain().getTransformerRegistry().addTransformer((Transformer) transformerRT.newInstance());
+                _beanDeploymentMetaData.addTransformer((Transformer) transformerRT.newInstance());
             } catch (InstantiationException e) {
                 throw new IllegalStateException("Invalid Transformer implementation '" + transformerRT.getName() + "'.", e);
             } catch (IllegalAccessException e) {
@@ -136,6 +129,7 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
     public void afterBeanDiscovery(@Observes AfterBeanDiscovery afterEvent) {
         for (ClientProxyBean proxyBean : _createdProxyBeans) {
             afterEvent.addBean(proxyBean);
+            _beanDeploymentMetaData.addClientProxy(proxyBean);
         }
     }
 
@@ -145,7 +139,7 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
      * @param event       CDI Event instance.
      */
     public void beforeShutdown(@Observes BeforeShutdown event, BeanManager beanManager) {
-        ApplicationServiceDescriptorSet.unbind();
+        BeanDeploymentMetaData.unbind();
     }
 
     private void addInjectableClientProxyBean(Bean<?> serviceBean, Class<?> serviceType, Service serviceAnnotation, BeanManager beanManager) {

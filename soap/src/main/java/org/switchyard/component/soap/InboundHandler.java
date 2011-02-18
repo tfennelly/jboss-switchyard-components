@@ -46,11 +46,9 @@ import org.switchyard.Exchange;
 import org.switchyard.HandlerException;
 import org.switchyard.Message;
 import org.switchyard.Service;
-import org.switchyard.ServiceDomain;
 import org.switchyard.component.soap.config.model.SOAPBindingModel;
 import org.switchyard.component.soap.util.SOAPUtil;
 import org.switchyard.component.soap.util.WSDLUtil;
-import org.switchyard.internal.ServiceDomains;
 import org.switchyard.internal.transform.TransformSequence;
 import org.switchyard.metadata.BaseExchangeContract;
 
@@ -71,7 +69,6 @@ public class InboundHandler extends BaseHandler {
 
     private MessageComposer _composer;
     private MessageDecomposer _decomposer;
-    private ServiceDomain _domain;
     private Service _service;
     private long _waitTimeout = DEFAULT_TIMEOUT; // default of 15 seconds
     private Endpoint _endpoint;
@@ -110,8 +107,6 @@ public class InboundHandler extends BaseHandler {
         if (_decomposer == null) {
             _decomposer = new DefaultMessageDecomposer();
         }
-
-        _domain = ServiceDomains.getDomain();
     }
 
     /**
@@ -229,7 +224,7 @@ public class InboundHandler extends BaseHandler {
         try {
             Exchange exchange;
 
-            exchange = _domain.createExchange(_service, exchangeContract, this);
+            exchange = _service.createExchange(exchangeContract, this);
             Message message = _composer.compose(soapMessage, exchange);
 
             if (!assertComposedMessageOK(message, operation, oneWay)) {
