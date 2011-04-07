@@ -27,6 +27,7 @@ import org.switchyard.ServiceReference;
 import org.switchyard.component.bean.deploy.BeanComponentActivator;
 import org.switchyard.component.bean.deploy.BeanDeploymentMetaData;
 import org.switchyard.component.bean.deploy.ServiceDescriptor;
+import org.switchyard.deploy.ServiceDomainManager;
 import org.switchyard.deploy.internal.AbstractDeployment;
 import org.switchyard.metadata.ServiceInterface;
 import org.switchyard.transform.Transformer;
@@ -40,6 +41,17 @@ import org.switchyard.transform.TransformerRegistry;
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
 public class SimpleCDIDeployment extends AbstractDeployment {
+
+    /**
+     * Constructor.
+     */
+    public SimpleCDIDeployment() {
+        super(ServiceDomainManager.createDomain());
+    }
+
+    @Override
+    public void init() {
+    }
 
     @Override
     public void start() {
