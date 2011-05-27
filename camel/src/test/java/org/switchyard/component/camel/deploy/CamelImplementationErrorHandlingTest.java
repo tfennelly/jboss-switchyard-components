@@ -24,14 +24,11 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.switchyard.component.camel.deploy.support.CustomException;
-import org.switchyard.test.InvocationFaultException;
+import org.switchyard.deploy.internal.Deployment;
 import org.switchyard.test.SwitchYardTestCase;
 import org.switchyard.test.SwitchYardTestCaseConfig;
 import org.switchyard.test.mixins.CDIMixIn;
@@ -51,7 +48,7 @@ public class CamelImplementationErrorHandlingTest extends SwitchYardTestCase {
     
     @Before
     public void setupMockEndpoint() {
-        final CamelContext camelContext = CamelActivator.getCamelContext();
+        final CamelContext camelContext = getCamelContext();
         final MockEndpoint endpoint = camelContext.getEndpoint("mock://throw", MockEndpoint.class);
         endpoint.whenAnyExchangeReceived(new ExceptionThrowingProcesor());
     }
@@ -68,5 +65,11 @@ public class CamelImplementationErrorHandlingTest extends SwitchYardTestCase {
         public void process(Exchange exchange) throws Exception {
             throw new CustomException("dummy exception");
         }
+    }
+
+    private CamelContext getCamelContext() {
+        Deployment deployment = (Deployment) getDeployment();
+        CamelActivator activator = (CamelActivator) deployment.getActivator("camel");
+        return activator.getCamelContext();
     }
 }

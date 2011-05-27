@@ -30,6 +30,7 @@ import org.apache.camel.ProducerTemplate;
 import org.apache.camel.spi.PackageScanClassResolver;
 import org.junit.Test;
 import org.switchyard.component.camel.deploy.support.CustomPackageScanResolver;
+import org.switchyard.deploy.internal.Deployment;
 import org.switchyard.test.MockHandler;
 import org.switchyard.test.SwitchYardTestCaseConfig;
 import org.switchyard.test.SwitchYardTestCase;
@@ -43,11 +44,11 @@ import org.switchyard.test.mixins.CDIMixIn;
  */
 @SwitchYardTestCaseConfig(config = "switchyard-activator-test.xml", mixins = CDIMixIn.class)
 public class CamelActivatorTest extends SwitchYardTestCase {
-    
+
     @Test
     public void sendOneWayMessageThroughCamelToSwitchYardService() throws Exception {
         final MockHandler mockHandler = registerInOnlyService("SimpleCamelService");
-        final CamelContext camelContext = CamelActivator.getCamelContext();
+        final CamelContext camelContext = getCamelContext();
         final ProducerTemplate producerTemplate = camelContext.createProducerTemplate();
         
         producerTemplate.sendBody("direct://input", "dummy payload");
@@ -59,7 +60,7 @@ public class CamelActivatorTest extends SwitchYardTestCase {
     
     @Test
     public void setCustomClassPathResolver() {
-        final CamelContext camelContext = CamelActivator.getCamelContext();
+        final CamelContext camelContext = getCamelContext();
         final PackageScanClassResolver p = camelContext.getPackageScanClassResolver();
         assertThat(p, is(instanceOf(CustomPackageScanResolver.class)));
    }
@@ -71,5 +72,10 @@ public class CamelActivatorTest extends SwitchYardTestCase {
         final String content = mockHandler.getMessages().poll().getMessage().getContent(String.class);
         assertThat(content, is(equalTo("dummy payload")));
     }
-    
+
+    private CamelContext getCamelContext() {
+        Deployment deployment = (Deployment) getDeployment();
+        CamelActivator activator = (CamelActivator) deployment.getActivator("camel");
+        return activator.getCamelContext();
+    }
 }
