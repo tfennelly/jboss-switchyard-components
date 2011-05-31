@@ -48,7 +48,7 @@ public class InboundHandler implements ExchangeHandler {
     
     private final CamelBindingModel _camelBindingModel;
     private final CamelContext _camelContext;
-    private final RouteDefinition _routeDefinition;
+    private RouteDefinition _routeDefinition;
 
     /**
      * Sole constructor.
@@ -59,7 +59,6 @@ public class InboundHandler implements ExchangeHandler {
     public InboundHandler(final CamelBindingModel camelBindingModel, final CamelContext camelContext) {
         _camelBindingModel = camelBindingModel;
         _camelContext = camelContext;
-        _routeDefinition = new RouteDefinition();
     }
     
     /**
@@ -69,41 +68,62 @@ public class InboundHandler implements ExchangeHandler {
      * @throws Exception If an error occurs while creating the route definition.
      */
     public void start(final ServiceReference serviceReference) throws Exception {
-        final String routeId = composeRouteId(serviceReference);
-        final RouteDefinition routeDefinition = _camelContext.getRouteDefinition(routeId);
-        if (routeDefinition == null) {
+        assertRouteDefinitionCreated(serviceReference);
+
+        final ServiceStatus status = _routeDefinition.getStatus(_camelContext);
+        if (status.isStartable()) {
+            _camelContext.startRoute(_routeDefinition);
+        }
+    }
+
+    /**
+     * Removes the route associated with the {@link ServiceReference}.
+     *
+     * @param serviceRef The {@link ServiceReference} of the target service.
+     * @throws Exception If an error occurs while trying to removed the route from the {@link CamelContext}.
+     */
+    public void stop(final ServiceReference serviceRef) throws Exception {
+        assertRouteDefinitionCreated(serviceRef);
+
+        final ServiceStatus status = _routeDefinition.getStatus(_camelContext);
+        if (status.isStoppable()) {
+            _camelContext.stopRoute(_routeDefinition);
+        }
+    }
+
+    private void assertRouteDefinitionCreated(final ServiceReference serviceReference) throws Exception {
+        // If it's not created... create it and add it to the CamelContext...
+        if (_routeDefinition == null) {
+            final String routeId = composeRouteId(serviceReference);
+
+            _routeDefinition = new RouteDefinition();
             _routeDefinition.routeId(routeId);
             _routeDefinition.from(uriFromBindingModel());
             _routeDefinition.to(composeSwitchYardComponentName(serviceReference));
             _camelContext.addRouteDefinition(_routeDefinition);
-        } else {
-            final ServiceStatus status = _routeDefinition.getStatus(_camelContext);
-            if (status != ServiceStatus.Started || status == ServiceStatus.Stopped) {
-                _camelContext.startRoute(_routeDefinition);
-            }
         }
     }
-    
+
     private String composeSwitchYardComponentName(final ServiceReference serviceReference) {
         final StringBuilder sb = new StringBuilder();
         sb.append("switchyard://").append(serviceReference.getName().getLocalPart());
         sb.append("?operationName=").append(operationName(serviceReference));
         return sb.toString();
     }
-    
+
     private String uriFromBindingModel() {
         return _camelBindingModel.getComponentURI().toString();
     }
-    
+
     private String operationName(final ServiceReference serviceRef) {
         final OperationSelector os = _camelBindingModel.getOperationSelector();
         if (os != null) {
             return _camelBindingModel.getOperationSelector().getOperationName();
         }
-        
+
         return lookupOperationNameFor(serviceRef);
     }
-    
+
     private String lookupOperationNameFor(final ServiceReference serviceRef) {
         final Set<ServiceOperation> operations = serviceRef.getInterface().getOperations();
         if (operations.size() != 1) {
@@ -116,20 +136,9 @@ public class InboundHandler implements ExchangeHandler {
         final ServiceOperation serviceOperation = operations.iterator().next();
         return serviceOperation.getName();
     }
-    
+
     private String composeRouteId(final ServiceReference serviceRef) {
         return serviceRef.getName().toString() + "-[" +_camelBindingModel.getComponentURI() + "]";
-    }
-    
-    /**
-     * Removes the route associated with the {@link ServiceReference}.
-     * 
-     * @param serviceRef The {@link ServiceReference} of the target service.
-     * @throws Exception If an error occurs while trying to removed the route from the {@link CamelContext}.
-     */
-    public void stop(final ServiceReference serviceRef) throws Exception {
-        final RouteDefinition rd = _camelContext.getRouteDefinition(composeRouteId(serviceRef));
-        _camelContext.stopRoute(rd);
     }
 
     /**
