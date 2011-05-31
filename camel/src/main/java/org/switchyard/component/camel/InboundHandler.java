@@ -23,6 +23,7 @@ package org.switchyard.component.camel;
 import java.util.Set;
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.ServiceStatus;
 import org.apache.camel.model.RouteDefinition;
 import org.switchyard.Exchange;
 import org.switchyard.ExchangeHandler;
@@ -47,6 +48,7 @@ public class InboundHandler implements ExchangeHandler {
     
     private final CamelBindingModel _camelBindingModel;
     private final CamelContext _camelContext;
+    private final RouteDefinition _routeDefinition;
 
     /**
      * Sole constructor.
@@ -57,6 +59,7 @@ public class InboundHandler implements ExchangeHandler {
     public InboundHandler(final CamelBindingModel camelBindingModel, final CamelContext camelContext) {
         _camelBindingModel = camelBindingModel;
         _camelContext = camelContext;
+        _routeDefinition = new RouteDefinition();
     }
     
     /**
@@ -66,12 +69,19 @@ public class InboundHandler implements ExchangeHandler {
      * @throws Exception If an error occurs while creating the route definition.
      */
     public void start(final ServiceReference serviceReference) throws Exception {
-        final RouteDefinition rd = new RouteDefinition();
-        rd.routeId(composeRouteId(serviceReference));
-        rd.from(uriFromBindingModel());
-        rd.to(composeSwitchYardComponentName(serviceReference));
-        
-        _camelContext.addRouteDefinition(rd);
+        final String routeId = composeRouteId(serviceReference);
+        final RouteDefinition routeDefinition = _camelContext.getRouteDefinition(routeId);
+        if (routeDefinition == null) {
+            _routeDefinition.routeId(routeId);
+            _routeDefinition.from(uriFromBindingModel());
+            _routeDefinition.to(composeSwitchYardComponentName(serviceReference));
+            _camelContext.addRouteDefinition(_routeDefinition);
+        } else {
+            final ServiceStatus status = _routeDefinition.getStatus(_camelContext);
+            if (status != ServiceStatus.Started || status == ServiceStatus.Stopped) {
+                _camelContext.startRoute(_routeDefinition);
+            }
+        }
     }
     
     private String composeSwitchYardComponentName(final ServiceReference serviceReference) {
@@ -119,7 +129,7 @@ public class InboundHandler implements ExchangeHandler {
      */
     public void stop(final ServiceReference serviceRef) throws Exception {
         final RouteDefinition rd = _camelContext.getRouteDefinition(composeRouteId(serviceRef));
-        _camelContext.removeRouteDefinition(rd);
+        _camelContext.stopRoute(rd);
     }
 
     /**

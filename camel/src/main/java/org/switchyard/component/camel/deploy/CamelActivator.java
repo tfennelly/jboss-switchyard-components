@@ -67,7 +67,6 @@ public class CamelActivator extends BaseActivator {
     
     private Map<QName, Set<InboundHandler>> _bindings = new HashMap<QName, Set<InboundHandler>>();
     private Map<QName, Set<OutboundHandler>> _references = new HashMap<QName, Set<OutboundHandler>>();
-    private Map<QName, RouteDefinition> _routeDefinitions = new HashMap<QName, RouteDefinition>();
     private Map<QName, SwitchYardConsumer> _implementations = new HashMap<QName, SwitchYardConsumer>();
     
     private CamelContext _camelContext = new DefaultCamelContext();
@@ -137,7 +136,6 @@ public class CamelActivator extends BaseActivator {
                 final SwitchyardEndpoint endpoint = (SwitchyardEndpoint) _camelContext.getEndpoint(endpointUri);
                 final SwitchYardConsumer consumer = endpoint.getConsumer();
                 _implementations.put(serviceName, consumer);
-                _routeDefinitions.put(serviceName, routeDef);
                 return consumer;
             } catch (final Exception e) {
                 throw new RuntimeException(e.getMessage(), e);
@@ -293,18 +291,16 @@ public class CamelActivator extends BaseActivator {
     @Override
     public void start(final ServiceReference serviceReference) {
         ServiceReferences.add(serviceReference.getName(), serviceReference);
-        startOutboundHandlers(serviceReference);
-        startRoute(serviceReference);
+        startInboundHandlers(serviceReference);
     }
 
     @Override
     public void stop(ServiceReference serviceReference) {
-        stopRoute(serviceReference);
-        stopOutboundHandlers(serviceReference);
+        stopInboundHandlers(serviceReference);
         ServiceReferences.remove(serviceReference.getName());
     }
 
-    private void startOutboundHandlers(final ServiceReference serviceReference) {
+    private void startInboundHandlers(final ServiceReference serviceReference) {
         final Set<InboundHandler> handlers = _bindings.get(serviceReference.getName());
         if (handlers != null) {
             for (InboundHandler inboundHandler : handlers) {
@@ -323,31 +319,7 @@ public class CamelActivator extends BaseActivator {
         stopCamelContext();
     }
 
-    private void startRoute(ServiceReference serviceReference) {
-        QName name = serviceReference.getName();
-        RouteDefinition route = _routeDefinitions.get(name);
-        if (route != null) {
-            try {
-                _camelContext.startRoute(route);
-            } catch (Exception e) {
-                throw new RuntimeException("Exception starting Camel route for Service '" + name + "'.", e);
-            }
-        }
-    }
-
-    private void stopRoute(ServiceReference serviceReference) {
-        QName name = serviceReference.getName();
-        RouteDefinition route = _routeDefinitions.get(name);
-        if (route != null) {
-            try {
-                _camelContext.stopRoute(route);
-            } catch (Exception e) {
-                throw new RuntimeException("Exception stopping Camel route for Service '" + name + "'.", e);
-            }
-        }
-    }
-
-    private void stopOutboundHandlers(ServiceReference serviceReference) {
+    private void stopInboundHandlers(ServiceReference serviceReference) {
         final Set<InboundHandler> handlers = _bindings.get(serviceReference.getName());
         if (handlers != null) {
             for (InboundHandler inboundHandler : handlers) {
