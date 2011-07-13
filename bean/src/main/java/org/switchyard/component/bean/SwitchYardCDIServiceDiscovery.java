@@ -41,6 +41,7 @@ import javax.xml.namespace.QName;
 import org.apache.log4j.Logger;
 import org.switchyard.component.bean.deploy.BeanDeploymentMetaData;
 import org.switchyard.component.bean.deploy.BeanDeploymentMetaDataCDIBean;
+import org.switchyard.component.bean.deploy.CDIBean;
 import org.switchyard.component.bean.deploy.CDIBeanServiceDescriptor;
 
 /**
@@ -99,14 +100,16 @@ public class SwitchYardCDIServiceDiscovery implements Extension {
             }
         }
 
+        CDIBean cdiBean = new CDIBean(bean, beanManager);
+
         // Create Service Proxy ExchangeHandlers and register them as Services, for all @Service beans...
         if (isServiceBean(bean)) {
             _logger.debug("Adding ServiceDescriptor for bean " + bean.getBeanClass().getName());
-            _beanDeploymentMetaData.addServiceDescriptor(new CDIBeanServiceDescriptor(bean, beanManager, _beanDeploymentMetaData));
+            _beanDeploymentMetaData.addServiceDescriptor(new CDIBeanServiceDescriptor(cdiBean, _beanDeploymentMetaData));
         }
 
-        // Register all classes in the deployment...
-        _beanDeploymentMetaData.addDeploymentClass(bean.getBeanClass());
+        // Register all beans in the deployment...
+        _beanDeploymentMetaData.addDeploymentBean(cdiBean);
     }
 
     /**

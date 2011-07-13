@@ -35,8 +35,10 @@ import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.model.FromDefinition;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.spi.PackageScanClassResolver;
+import org.apache.camel.spi.Registry;
 import org.switchyard.ExchangeHandler;
 import org.switchyard.ServiceReference;
+import org.switchyard.component.bean.deploy.BeanDeploymentMetaData;
 import org.switchyard.component.camel.InboundHandler;
 import org.switchyard.component.camel.OutboundHandler;
 import org.switchyard.component.camel.RouteFactory;
@@ -103,15 +105,28 @@ public class CamelActivator extends BaseActivator {
     }
     
     private CamelContext createCamelContext() {
+        DefaultCamelContext camelContext;
+
         try {
             //TODO: We are currently creating a DefaultCamelContext
             // which is going to lead to issues when for example running
             // in an OSGI container in which Camel requires a different CamelContext.
             // Perhaps we could make the CamelContext injectable?
-            return new DefaultCamelContext(new InitialContext());
+            camelContext = new DefaultCamelContext(new InitialContext());
         } catch (final Exception e) {
             throw new RuntimeException(e);
         }
+
+        BeanDeploymentMetaData beanDeploymentMetaData = BeanDeploymentMetaData.lookupBeanDeploymentMetaData();
+        if (beanDeploymentMetaData != null) {
+            // We have some bean services.  Expose them to Camel...
+            Registry baseRegistry = camelContext.getRegistry();
+            CDIAwareRegistry cdiAwareRegistry = new CDIAwareRegistry(beanDeploymentMetaData, baseRegistry);
+
+            camelContext.setRegistry(cdiAwareRegistry);
+        }
+
+        return camelContext;
     }
     
     /**
