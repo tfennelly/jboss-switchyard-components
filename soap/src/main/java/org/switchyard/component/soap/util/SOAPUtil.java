@@ -22,6 +22,7 @@ package org.switchyard.component.soap.util;
 import java.io.ByteArrayInputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URLEncoder;
 import java.util.Iterator;
 
 import javax.xml.namespace.QName;
@@ -124,6 +125,33 @@ public final class SOAPUtil {
             }
         }
         return faultMsg;
+    }
+
+    /**
+     * ensure the Message is SOAP Fault.
+     * @param soapMessage SOAP message  
+     * @return SOAP Message containing Fault.
+     * @throws SOAPException If the message could not be generated.
+     */
+    public static SOAPMessage ensureFault(final SOAPMessage soapMessage) throws SOAPException {
+        if (soapMessage.getSOAPBody().getFault() == null) {
+            // content of soapMessage is something other than SOAP:Fault.
+            // Put into fault detail with URL encoded
+            String faultDetail = null;
+            try {
+                faultDetail = URLEncoder.encode(XMLHelper.toString(soapMessage.getSOAPBody()), "UTF-8");
+            } catch (Exception e) {
+                LOGGER.warn("Could not parse content of fault message", e);
+                faultDetail = "Could not parse content of fault message: " + soapMessage.getSOAPBody().toString();
+            }
+            QName name = XMLHelper.createQName("FaultContents");
+            soapMessage.getSOAPBody().removeContents();
+            soapMessage.getSOAPBody().addFault(SERVER_FAULT_QN, "Send failed")
+                                     .addDetail()
+                                     .addDetailEntry(name)
+                                     .addTextNode(faultDetail);
+        }
+        return soapMessage;
     }
 
     /**
