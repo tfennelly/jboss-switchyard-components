@@ -186,25 +186,6 @@ public class InboundHandler extends BaseHandler {
     }
 
     /**
-     * The handler method that handles responses from a WebService.
-     *
-     * @param exchange the Exchange
-     * @return Decomposed SOAPMessage.
-     */
-    public SOAPMessage decompose(final Exchange exchange) {
-        try {
-            return _decomposer.decompose(exchange, _decomposerMappedVariableNames);
-        } catch (SOAPException se) {
-            try {
-                return SOAPUtil.generateFault(se);
-            } catch (SOAPException e) {
-                LOGGER.error(e);
-            }
-        }
-        return null;
-    }
-
-    /**
      * The delegate method called by the Webservice implementation.
      * @param soapMessage the SOAP request
      * @return the SOAP response
@@ -258,14 +239,17 @@ public class InboundHandler extends BaseHandler {
                 exchange.send(message);
                 try {
                     exchange = inOutHandler.waitForOut(_waitTimeout);
-                    if (exchange.getState() == ExchangeState.FAULT) {
-                        return SOAPUtil.ensureFault(decompose(exchange));
-                       }
                 } catch (DeliveryException e) {
                     return handleException(oneWay, new SOAPException("Timed out after " + _waitTimeout + " ms waiting on synchronous response from target service '" + _service.getName() + "'."));
                 }
 
-                return decompose(exchange);
+                SOAPMessage soapResponse = _decomposer.decompose(exchange, _decomposerMappedVariableNames);
+                if (exchange.getState() == ExchangeState.FAULT && soapMessage.getSOAPBody().getFault() == null) {
+                    return handleException(oneWay, new SOAPException("Invalid response SOAPMessage construction.  The associated SwitchYard Exchange is in a FAULT state, " +
+                            "but the SOAPMessage is not a Fault message.  The MessageDecomposer implementation in use (" + _composer.getClass().getName() + ") must generate " +
+                            "the SOAPMessage instance properly as a Fault message."));
+                }
+                return soapResponse;
             }
         } catch (SOAPException se) {
             return handleException(oneWay, se);

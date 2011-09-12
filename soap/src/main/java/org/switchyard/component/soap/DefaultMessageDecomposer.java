@@ -25,14 +25,16 @@ import javax.xml.namespace.QName;
 import javax.xml.soap.SOAPException;
 import javax.xml.soap.SOAPHeader;
 import javax.xml.soap.SOAPMessage;
+import javax.xml.transform.dom.DOMSource;
 
 import org.switchyard.Context;
 import org.switchyard.Exchange;
+import org.switchyard.ExchangeState;
 import org.switchyard.Message;
 import org.switchyard.Property;
 import org.switchyard.Scope;
 import org.switchyard.component.soap.util.SOAPUtil;
-import org.w3c.dom.Node;
+import org.w3c.dom.Element;
 
 /**
  * The default implementation of MessageDecomposer simply copies the Message body onto SOAP
@@ -52,7 +54,7 @@ public class DefaultMessageDecomposer implements MessageDecomposer {
         if (SOAPUtil.SOAP_MESSAGE_FACTORY == null) {
             throw new SOAPException("Failed to instantiate SOAP Message Factory");
         }
-        final SOAPMessage response = SOAPUtil.SOAP_MESSAGE_FACTORY.createMessage();
+        SOAPMessage response;
         if (message != null) {
             // check to see if the payload is null or it's a full SOAP Message
             if (message.getContent() == null) {
@@ -63,14 +65,30 @@ public class DefaultMessageDecomposer implements MessageDecomposer {
             }
             
             // convert the message content to a form we can work with
-            Node input = message.getContent(Node.class);
-            
+            Element messageElement = message.getContent(Element.class);
+
             try {
-                Node node = response.getSOAPBody().getOwnerDocument().importNode(input, true);
-                response.getSOAPBody().appendChild(node);
+                response = SOAPUtil.SOAP_MESSAGE_FACTORY.createMessage();
+
+                Element messageElementImport = (Element) response.getSOAPBody().getOwnerDocument().importNode(messageElement, true);
+                if (isCompleteSOAPMessage(messageElementImport)) {
+                    response.getSOAPPart().setContent(new DOMSource(messageElementImport));
+                } else {
+                    // It's just the SOAP payload... construct the full message around it...
+                    if (exchange.getState() != ExchangeState.FAULT) {
+                        response.getSOAPBody().appendChild(messageElementImport);
+                    } else {
+                        response.getSOAPBody().addFault(SOAPUtil.SERVER_FAULT_QN, "Send failed")
+                                                 .addDetail()
+                                                 .addDetailEntry(QName.valueOf("FaultContents"))
+                                                 .appendChild(messageElementImport);
+                    }
+                }
             } catch (Exception e) {
                 throw new SOAPException("Unable to parse SOAP Message", e);
             }
+        } else {
+            response = SOAPUtil.SOAP_MESSAGE_FACTORY.createMessage();
         }
 
         final Context context = exchange.getContext();
@@ -86,5 +104,19 @@ public class DefaultMessageDecomposer implements MessageDecomposer {
         }
 
         return response;
+    }
+
+    private boolean isCompleteSOAPMessage(Element messageElement) {
+        String rootName = messageElement.getLocalName().toLowerCase();
+
+        if (rootName.equals("envelope") || rootName.equals("fault")) {
+            String nsURI = messageElement.getNamespaceURI();
+
+            if ("http://schemas.xmlsoap.org/soap/envelope/".equals(nsURI)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

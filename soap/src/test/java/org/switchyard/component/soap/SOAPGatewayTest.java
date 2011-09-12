@@ -301,12 +301,10 @@ public class SOAPGatewayTest {
                         +    "<faultcode>SOAP-ENV:Server</faultcode>"
                         +    "<faultstring>Send failed</faultstring>"
                         +    "<detail><FaultContents>"
-                        +    URLEncoder.encode(
-                        	         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                                  + "<SOAP-ENV:Body xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\">"
-                                  + faultString
-                                  + "</SOAP-ENV:Body>"
-                                  , "UTF-8")
+                        +   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                        + "<SOAP-ENV:Body xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\">"
+                        + faultString
+                        + "</SOAP-ENV:Body>"
                         +    "</FaultContents></detail>"
                         + "</SOAP-ENV:Fault>";
 
